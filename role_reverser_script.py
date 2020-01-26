@@ -24,12 +24,12 @@ def print_options(node: Node, nodes: Mapping[str, Node]):
                 f'{number}. "{choice.player}" ' 
                 f'to which the player replies "{target_node.npc}"\n'
             )
-    
+
 
 def prompt_option(node: Node) -> Choice:
     while True:
         number_input = input('Enter a number or the word "done" to finish.\n')
-        
+
         if number_input.lower() == 'done':
             return None
 
@@ -45,20 +45,24 @@ def reverse_roles(starting_choice: Choice, nodes: Mapping[str, Node]) -> List[No
     id_generator = base64_gen()
 
     target_node = nodes[starting_choice.target]
-    next_id = next(id_generator)
 
-    while target_node.choices and any(c.target for c in target_node.choices):
+    first_node = Node(npc=starting_choice.player, id=next(id_generator), choices=[])
+    next_id = next(id_generator)
+    first_node.choices = [Choice(player=target_node.npc, target=next_id)]
+    yield first_node
+
+    while node_contains_valid_choices(target_node):
         print_options(target_node, nodes)
         choice = prompt_option(target_node)
         if choice is None:
             break
-            
+
         target_node = nodes[choice.target]
         new_node = Node(npc=choice.player, id=next_id, choices=[])
         next_id = next(id_generator)
         new_node.choices = [Choice(player=target_node.npc, target=next_id)]
         yield new_node
-    
+
     print('The chosen node has no choices. Finishing up...')
 
 
@@ -84,7 +88,7 @@ def reverse_roles(starting_choice: Choice, nodes: Mapping[str, Node]) -> List[No
 def reverser(file_path, start_node_id, start_choice_num):
     with open(file_path, 'r') as file_handle:
         graph_data = json.load(file_handle)
-    
+
     node_schema = NodeSchema(many=True)
     nodes_by_id = {n.id: n for n in node_schema.load(graph_data)}
     
@@ -96,8 +100,7 @@ def reverser(file_path, start_node_id, start_choice_num):
     print(f'Saving derived graph to {new_file_path}...')
     with open(new_file_path, 'w') as file_handle:
         file_handle.write(node_schema.dumps(derived_nodes))
-        
+
 
 if __name__ == '__main__':
     reverser()
-
